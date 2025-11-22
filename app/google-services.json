@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "534375081232",
+    "project_id": "tastetracker-793c9",
+    "storage_bucket": "tastetracker-793c9.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:534375081232:android:71ad7c432bec12ca763195",
+        "android_client_info": {
+          "package_name": "week11.st421007.finalproject"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAGOKyk6C48PsZxhxYIz5Tb7CTcfFDn1JE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:534375081232:android:cd8dd8e0845f662f763195",
+        "android_client_info": {
+          "package_name": "week14.project.tastetracker"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAGOKyk6C48PsZxhxYIz5Tb7CTcfFDn1JE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
