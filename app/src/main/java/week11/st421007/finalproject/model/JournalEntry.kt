@@ -18,7 +18,6 @@ data class JournalEntry(
     val latitude: Double? = null,
     val longitude: Double? = null
 ) {
-
     fun getVisitDateAsDate(): Date = visitDate.toDate()
 
     fun toMap(): Map<String, Any> {
@@ -35,7 +34,7 @@ data class JournalEntry(
 
         latitude?.let { map["latitude"] = it }
         longitude?.let { map["longitude"] = it }
-        
+
         return map
     }
 

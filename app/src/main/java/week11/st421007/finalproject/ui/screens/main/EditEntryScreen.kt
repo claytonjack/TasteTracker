@@ -24,6 +24,7 @@ import kotlinx.coroutines.launch
 import week11.st421007.finalproject.data.JournalRepository
 import week11.st421007.finalproject.model.JournalEntry
 import week11.st421007.finalproject.util.UiState
+import week11.st421007.finalproject.viewmodel.AuthViewModel
 import week11.st421007.finalproject.viewmodel.JournalViewModel
 import java.util.*
 
@@ -31,9 +32,11 @@ import java.util.*
 @Composable
 fun EditEntryScreen(
     entryId: String,
+    authViewModel: AuthViewModel,
     journalViewModel: JournalViewModel,
     onNavigateBack: () -> Unit
 ) {
+    val userId = authViewModel.currentUserId ?: return
     val journalRepository = remember { JournalRepository() }
     val scope = rememberCoroutineScope()
 
@@ -56,7 +59,7 @@ fun EditEntryScreen(
 
     LaunchedEffect(entryId) {
         scope.launch {
-            val result = journalRepository.getEntryById("", entryId)
+            val result = journalRepository.getEntryById(userId, entryId)
             result.fold(
                 onSuccess = { loadedEntry ->
                     entry = loadedEntry
@@ -308,7 +311,7 @@ fun EditEntryScreen(
                             entry?.let { currentEntry ->
                                 journalViewModel.updateEntry(
                                     entryId = currentEntry.id,
-                                    userId = "",
+                                    userId = userId,
                                     restaurantName = restaurantName,
                                     visitDate = Timestamp(selectedDate),
                                     foodQualityRating = rating,
@@ -377,7 +380,7 @@ fun EditEntryScreen(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        journalViewModel.deleteEntry("", entryId)
+                        journalViewModel.deleteEntry(userId, entryId)
                         showDeleteDialog = false
                     }
                 ) {

@@ -19,15 +19,18 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import com.google.firebase.Timestamp
 import week11.st421007.finalproject.util.UiState
+import week11.st421007.finalproject.viewmodel.AuthViewModel
 import week11.st421007.finalproject.viewmodel.JournalViewModel
 import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddEntryScreen(
+    authViewModel: AuthViewModel,
     journalViewModel: JournalViewModel,
     onNavigateBack: () -> Unit
 ) {
+    val userId = authViewModel.currentUserId ?: return
     var restaurantName by remember { mutableStateOf("") }
     var location by remember { mutableStateOf("") }
     var notes by remember { mutableStateOf("") }
@@ -232,7 +235,7 @@ fun AddEntryScreen(
                 onClick = {
                     focusManager.clearFocus()
                     journalViewModel.addEntry(
-                        userId = "",
+                        userId = userId,
                         restaurantName = restaurantName,
                         visitDate = Timestamp(selectedDate),
                         foodQualityRating = rating,

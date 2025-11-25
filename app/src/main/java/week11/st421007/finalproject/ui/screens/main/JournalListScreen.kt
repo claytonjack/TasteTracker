@@ -8,6 +8,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.Star
@@ -20,6 +21,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import week11.st421007.finalproject.model.JournalEntry
 import week11.st421007.finalproject.util.UiState
+import week11.st421007.finalproject.viewmodel.AuthViewModel
 import week11.st421007.finalproject.viewmodel.JournalViewModel
 import java.text.SimpleDateFormat
 import java.util.*
@@ -27,23 +29,34 @@ import java.util.*
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun JournalListScreen(
+    authViewModel: AuthViewModel,
     journalViewModel: JournalViewModel,
     onNavigateToAddEntry: () -> Unit,
-    onNavigateToEditEntry: (String) -> Unit
+    onNavigateToEditEntry: (String) -> Unit,
+    onLogout: () -> Unit
 ) {
+    val userId = authViewModel.currentUserId ?: return
     val entriesState by journalViewModel.entriesState.collectAsState()
 
-    LaunchedEffect(Unit) {
-        journalViewModel.loadEntries("")
+    var showLogoutDialog by remember { mutableStateOf(false) }
+
+    LaunchedEffect(userId) {
+        journalViewModel.loadEntries(userId)
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Food Journal") },
+                actions = {
+                    IconButton(onClick = { showLogoutDialog = true }) {
+                        Icon(Icons.Default.ExitToApp, contentDescription = "Logout")
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primary,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimary
+                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
+                    actionIconContentColor = MaterialTheme.colorScheme.onPrimary
                 )
             )
         },
@@ -123,6 +136,30 @@ fun JournalListScreen(
             }
             else -> {}
         }
+    }
+
+    if (showLogoutDialog) {
+        AlertDialog(
+            onDismissRequest = { showLogoutDialog = false },
+            title = { Text("Logout") },
+            text = { Text("Are you sure you want to logout?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        authViewModel.signOut()
+                        showLogoutDialog = false
+                        onLogout()
+                    }
+                ) {
+                    Text("Logout")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLogoutDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }
 

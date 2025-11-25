@@ -12,13 +12,20 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import week11.st421007.finalproject.ui.screens.auth.ForgotPasswordScreen
+import week11.st421007.finalproject.ui.screens.auth.LoginScreen
+import week11.st421007.finalproject.ui.screens.auth.SignupScreen
 import week11.st421007.finalproject.ui.screens.main.AddEntryScreen
 import week11.st421007.finalproject.ui.screens.main.EditEntryScreen
 import week11.st421007.finalproject.ui.screens.main.JournalListScreen
 import week11.st421007.finalproject.ui.screens.main.MapScreen
+import week11.st421007.finalproject.viewmodel.AuthViewModel
 import week11.st421007.finalproject.viewmodel.JournalViewModel
 
 sealed class Screen(val route: String) {
+    object Login : Screen("login")
+    object Signup : Screen("signup")
+    object ForgotPassword : Screen("forgot_password")
     object Main : Screen("main")
     object AddEntry : Screen("add_entry")
     object EditEntry : Screen("edit_entry/{entryId}") {
@@ -29,12 +36,64 @@ sealed class Screen(val route: String) {
 @Composable
 fun NavigationGraph(
     navController: NavHostController,
+    authViewModel: AuthViewModel = viewModel(),
     journalViewModel: JournalViewModel = viewModel()
 ) {
+    val isAuthenticated by authViewModel.isAuthenticated.collectAsState()
+
+    val startDestination = if (isAuthenticated) {
+        Screen.Main.route
+    } else {
+        Screen.Login.route
+    }
+
     NavHost(
         navController = navController,
-        startDestination = Screen.Main.route
+        startDestination = startDestination
     ) {
+        composable(Screen.Login.route) {
+            LoginScreen(
+                authViewModel = authViewModel,
+                onNavigateToSignup = {
+                    navController.navigate(Screen.Signup.route)
+                },
+                onNavigateToForgotPassword = {
+                    navController.navigate(Screen.ForgotPassword.route)
+                },
+                onLoginSuccess = {
+                    navController.navigate(Screen.Main.route) {
+                        popUpTo(Screen.Login.route) { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        composable(Screen.Signup.route) {
+            SignupScreen(
+                authViewModel = authViewModel,
+                onNavigateToLogin = {
+                    navController.popBackStack()
+                },
+                onSignupSuccess = {
+                    navController.navigate(Screen.Main.route) {
+                        popUpTo(Screen.Login.route) { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        composable(Screen.ForgotPassword.route) {
+            ForgotPasswordScreen(
+                authViewModel = authViewModel,
+                onNavigateBack = {
+                    navController.popBackStack()
+                },
+                onResetSuccess = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
         composable(Screen.Main.route) {
             var selectedTab by remember { mutableStateOf(0) }
 
@@ -59,12 +118,19 @@ fun NavigationGraph(
                 Box(modifier = Modifier.padding(bottom = paddingValues.calculateBottomPadding())) {
                     when (selectedTab) {
                         0 -> JournalListScreen(
+                            authViewModel = authViewModel,
                             journalViewModel = journalViewModel,
                             onNavigateToAddEntry = {
                                 navController.navigate(Screen.AddEntry.route)
                             },
                             onNavigateToEditEntry = { entryId ->
                                 navController.navigate(Screen.EditEntry.createRoute(entryId))
+                            },
+                            onLogout = {
+                                authViewModel.signOut()
+                                navController.navigate(Screen.Login.route) {
+                                    popUpTo(0) { inclusive = true }
+                                }
                             }
                         )
                         1 -> MapScreen()
@@ -75,6 +141,7 @@ fun NavigationGraph(
 
         composable(Screen.AddEntry.route) {
             AddEntryScreen(
+                authViewModel = authViewModel,
                 journalViewModel = journalViewModel,
                 onNavigateBack = {
                     navController.popBackStack()
@@ -91,6 +158,7 @@ fun NavigationGraph(
             val entryId = backStackEntry.arguments?.getString("entryId") ?: ""
             EditEntryScreen(
                 entryId = entryId,
+                authViewModel = authViewModel,
                 journalViewModel = journalViewModel,
                 onNavigateBack = {
                     navController.popBackStack()

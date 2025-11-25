@@ -12,7 +12,7 @@ class JournalRepository {
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
 
     private fun getUserEntriesCollection(userId: String) =
-        firestore.collection("entries")
+        firestore.collection("users").document(userId).collection("entries")
 
     fun getUserEntries(userId: String): Flow<Result<List<JournalEntry>>> = callbackFlow {
         val listenerRegistration = getUserEntriesCollection(userId)
