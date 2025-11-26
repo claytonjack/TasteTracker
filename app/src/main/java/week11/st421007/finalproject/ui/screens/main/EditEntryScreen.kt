@@ -23,9 +23,11 @@ import com.google.firebase.Timestamp
 import kotlinx.coroutines.launch
 import week11.st421007.finalproject.data.JournalRepository
 import week11.st421007.finalproject.model.JournalEntry
+import week11.st421007.finalproject.ui.components.RestaurantAutocompleteField
 import week11.st421007.finalproject.util.UiState
 import week11.st421007.finalproject.viewmodel.AuthViewModel
 import week11.st421007.finalproject.viewmodel.JournalViewModel
+import week11.st421007.finalproject.viewmodel.PlacesViewModel
 import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -34,6 +36,7 @@ fun EditEntryScreen(
     entryId: String,
     authViewModel: AuthViewModel,
     journalViewModel: JournalViewModel,
+    placesViewModel: PlacesViewModel,
     onNavigateBack: () -> Unit
 ) {
     val userId = authViewModel.currentUserId ?: return
@@ -52,8 +55,12 @@ fun EditEntryScreen(
     var selectedDate by remember { mutableStateOf(Date()) }
     var showDatePicker by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
+    var selectedLatitude by remember { mutableStateOf<Double?>(null) }
+    var selectedLongitude by remember { mutableStateOf<Double?>(null) }
 
     val operationState by journalViewModel.operationState.collectAsState()
+    val predictions by placesViewModel.predictions.collectAsState()
+    val selectedPlace by placesViewModel.selectedPlace.collectAsState()
     val focusManager = LocalFocusManager.current
     val scrollState = rememberScrollState()
 
@@ -69,6 +76,8 @@ fun EditEntryScreen(
                     rating = loadedEntry.foodQualityRating
                     priceLevel = loadedEntry.priceLevel
                     selectedDate = loadedEntry.getVisitDateAsDate()
+                    selectedLatitude = loadedEntry.latitude
+                    selectedLongitude = loadedEntry.longitude
                     isLoading = false
                 },
                 onFailure = { exception ->
@@ -83,6 +92,15 @@ fun EditEntryScreen(
         if (operationState is UiState.Success) {
             journalViewModel.resetOperationState()
             onNavigateBack()
+        }
+    }
+
+    LaunchedEffect(selectedPlace) {
+        selectedPlace?.let { place ->
+            restaurantName = place.name
+            location = place.address
+            selectedLatitude = place.latitude
+            selectedLongitude = place.longitude
         }
     }
 
@@ -150,18 +168,20 @@ fun EditEntryScreen(
                 ) {
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    OutlinedTextField(
+                    RestaurantAutocompleteField(
                         value = restaurantName,
-                        onValueChange = { restaurantName = it },
-                        label = { Text("Restaurant Name *") },
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(
-                            capitalization = KeyboardCapitalization.Words,
-                            imeAction = ImeAction.Next
-                        ),
-                        keyboardActions = KeyboardActions(
-                            onNext = { focusManager.moveFocus(FocusDirection.Down) }
-                        ),
+                        onValueChange = {
+                            restaurantName = it
+                            placesViewModel.updateSearchQuery(it)
+                        },
+                        predictions = predictions,
+                        onPlaceSelected = { place ->
+                            placesViewModel.selectPlace(place.placeId)
+                        },
+                        onClearClick = {
+                            restaurantName = ""
+                            placesViewModel.clearSelection()
+                        },
                         modifier = Modifier.fillMaxWidth()
                     )
 
@@ -170,7 +190,7 @@ fun EditEntryScreen(
                     OutlinedTextField(
                         value = location,
                         onValueChange = { location = it },
-                        label = { Text("Location/Address *") },
+                        label = { Text("Location *") },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(
                             capitalization = KeyboardCapitalization.Words,
@@ -319,8 +339,8 @@ fun EditEntryScreen(
                                     location = location,
                                     notes = notes,
                                     createdAt = currentEntry.createdAt,
-                                    latitude = null,
-                                    longitude = null
+                                    latitude = selectedLatitude,
+                                    longitude = selectedLongitude
                                 )
                             }
                         },

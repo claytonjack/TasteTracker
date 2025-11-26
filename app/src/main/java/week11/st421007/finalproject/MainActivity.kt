@@ -10,11 +10,13 @@ import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.rememberNavController
+import com.google.android.libraries.places.api.Places
 import com.google.firebase.FirebaseApp
 import week11.st421007.finalproject.ui.theme.TasteTrackerTheme
 import week11.st421007.finalproject.util.NavigationGraph
 import week11.st421007.finalproject.viewmodel.AuthViewModel
 import week11.st421007.finalproject.viewmodel.JournalViewModel
+import week11.st421007.finalproject.viewmodel.PlacesViewModel
 
 class MainActivity : ComponentActivity() {
 
@@ -22,6 +24,10 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         FirebaseApp.initializeApp(this)
+
+        if (!Places.isInitialized()) {
+            Places.initialize(applicationContext, BuildConfig.MAPS_API_KEY)
+        }
 
         enableEdgeToEdge()
 
@@ -34,11 +40,13 @@ class MainActivity : ComponentActivity() {
                     val navController = rememberNavController()
                     val authViewModel: AuthViewModel = viewModel()
                     val journalViewModel: JournalViewModel = viewModel()
+                    val placesViewModel: PlacesViewModel = viewModel()
 
                     NavigationGraph(
                         navController = navController,
                         authViewModel = authViewModel,
-                        journalViewModel = journalViewModel
+                        journalViewModel = journalViewModel,
+                        placesViewModel = placesViewModel
                     )
                 }
             }

@@ -18,9 +18,11 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import com.google.firebase.Timestamp
+import week11.st421007.finalproject.ui.components.RestaurantAutocompleteField
 import week11.st421007.finalproject.util.UiState
 import week11.st421007.finalproject.viewmodel.AuthViewModel
 import week11.st421007.finalproject.viewmodel.JournalViewModel
+import week11.st421007.finalproject.viewmodel.PlacesViewModel
 import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -28,9 +30,11 @@ import java.util.*
 fun AddEntryScreen(
     authViewModel: AuthViewModel,
     journalViewModel: JournalViewModel,
+    placesViewModel: PlacesViewModel,
     onNavigateBack: () -> Unit
 ) {
     val userId = authViewModel.currentUserId ?: return
+
     var restaurantName by remember { mutableStateOf("") }
     var location by remember { mutableStateOf("") }
     var notes by remember { mutableStateOf("") }
@@ -38,8 +42,12 @@ fun AddEntryScreen(
     var priceLevel by remember { mutableStateOf(2) }
     var selectedDate by remember { mutableStateOf(Date()) }
     var showDatePicker by remember { mutableStateOf(false) }
+    var selectedLatitude by remember { mutableStateOf<Double?>(null) }
+    var selectedLongitude by remember { mutableStateOf<Double?>(null) }
 
     val operationState by journalViewModel.operationState.collectAsState()
+    val predictions by placesViewModel.predictions.collectAsState()
+    val selectedPlace by placesViewModel.selectedPlace.collectAsState()
     val focusManager = LocalFocusManager.current
     val scrollState = rememberScrollState()
 
@@ -47,6 +55,21 @@ fun AddEntryScreen(
         if (operationState is UiState.Success) {
             journalViewModel.resetOperationState()
             onNavigateBack()
+        }
+    }
+
+    LaunchedEffect(selectedPlace) {
+        selectedPlace?.let { place ->
+            restaurantName = place.name
+            location = place.address
+            selectedLatitude = place.latitude
+            selectedLongitude = place.longitude
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            placesViewModel.clearSelection()
         }
     }
 
@@ -76,18 +99,20 @@ fun AddEntryScreen(
         ) {
             Spacer(modifier = Modifier.height(16.dp))
 
-            OutlinedTextField(
+            RestaurantAutocompleteField(
                 value = restaurantName,
-                onValueChange = { restaurantName = it },
-                label = { Text("Restaurant Name *") },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(
-                    capitalization = KeyboardCapitalization.Words,
-                    imeAction = ImeAction.Next
-                ),
-                keyboardActions = KeyboardActions(
-                    onNext = { focusManager.moveFocus(FocusDirection.Down) }
-                ),
+                onValueChange = {
+                    restaurantName = it
+                    placesViewModel.updateSearchQuery(it)
+                },
+                predictions = predictions,
+                onPlaceSelected = { place ->
+                    placesViewModel.selectPlace(place.placeId)
+                },
+                onClearClick = {
+                    restaurantName = ""
+                    placesViewModel.clearSelection()
+                },
                 modifier = Modifier.fillMaxWidth()
             )
 
@@ -96,7 +121,7 @@ fun AddEntryScreen(
             OutlinedTextField(
                 value = location,
                 onValueChange = { location = it },
-                label = { Text("Location/Address *") },
+                label = { Text("Location *") },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(
                     capitalization = KeyboardCapitalization.Words,
@@ -242,8 +267,8 @@ fun AddEntryScreen(
                         priceLevel = priceLevel,
                         location = location,
                         notes = notes,
-                        latitude = null,
-                        longitude = null
+                        latitude = selectedLatitude,
+                        longitude = selectedLongitude
                     )
                 },
                 enabled = operationState !is UiState.Loading,

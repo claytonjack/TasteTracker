@@ -21,6 +21,7 @@ import week11.st421007.finalproject.ui.screens.main.JournalListScreen
 import week11.st421007.finalproject.ui.screens.main.MapScreen
 import week11.st421007.finalproject.viewmodel.AuthViewModel
 import week11.st421007.finalproject.viewmodel.JournalViewModel
+import week11.st421007.finalproject.viewmodel.PlacesViewModel
 
 sealed class Screen(val route: String) {
     object Login : Screen("login")
@@ -37,7 +38,8 @@ sealed class Screen(val route: String) {
 fun NavigationGraph(
     navController: NavHostController,
     authViewModel: AuthViewModel = viewModel(),
-    journalViewModel: JournalViewModel = viewModel()
+    journalViewModel: JournalViewModel = viewModel(),
+    placesViewModel: PlacesViewModel = viewModel()
 ) {
     val isAuthenticated by authViewModel.isAuthenticated.collectAsState()
 
@@ -133,7 +135,17 @@ fun NavigationGraph(
                                 }
                             }
                         )
-                        1 -> MapScreen()
+                        1 -> MapScreen(
+                            journalViewModel = journalViewModel,
+                            onMarkerClick = { _ ->
+                            },
+                            onLogout = {
+                                authViewModel.signOut()
+                                navController.navigate(Screen.Login.route) {
+                                    popUpTo(0) { inclusive = true }
+                                }
+                            }
+                        )
                     }
                 }
             }
@@ -143,6 +155,7 @@ fun NavigationGraph(
             AddEntryScreen(
                 authViewModel = authViewModel,
                 journalViewModel = journalViewModel,
+                placesViewModel = placesViewModel,
                 onNavigateBack = {
                     navController.popBackStack()
                 }
@@ -160,6 +173,7 @@ fun NavigationGraph(
                 entryId = entryId,
                 authViewModel = authViewModel,
                 journalViewModel = journalViewModel,
+                placesViewModel = placesViewModel,
                 onNavigateBack = {
                     navController.popBackStack()
                 }
