@@ -20,13 +20,25 @@ class JournalViewModel : ViewModel() {
     private val _operationState = MutableStateFlow<UiState<String>>(UiState.Idle)
     val operationState: StateFlow<UiState<String>> = _operationState.asStateFlow()
 
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+
+    private val _selectedPriceLevel = MutableStateFlow<Int?>(null)
+    val selectedPriceLevel: StateFlow<Int?> = _selectedPriceLevel.asStateFlow()
+
+    private val _minRating = MutableStateFlow<Float?>(null)
+    val minRating: StateFlow<Float?> = _minRating.asStateFlow()
+
+    private var allEntries: List<JournalEntry> = emptyList()
+
     fun loadEntries(userId: String) {
         _entriesState.value = UiState.Loading
         viewModelScope.launch {
             journalRepository.getUserEntries(userId).collect { result ->
                 result.fold(
                     onSuccess = { entries ->
-                        _entriesState.value = UiState.Success(entries)
+                        allEntries = entries
+                        applyFilters()
                     },
                     onFailure = { exception ->
                         _entriesState.value = UiState.Error(
@@ -155,6 +167,55 @@ class JournalViewModel : ViewModel() {
                 }
             )
         }
+    }
+
+    fun updateSearchQuery(query: String) {
+        _searchQuery.value = query
+        applyFilters()
+    }
+
+    fun setPriceLevelFilter(priceLevel: Int?) {
+        _selectedPriceLevel.value = priceLevel
+        applyFilters()
+    }
+
+    fun setMinRatingFilter(rating: Float?) {
+        _minRating.value = rating
+        applyFilters()
+    }
+
+    fun clearFilters() {
+        _searchQuery.value = ""
+        _selectedPriceLevel.value = null
+        _minRating.value = null
+        applyFilters()
+    }
+
+    private fun applyFilters() {
+        var filtered = allEntries
+
+        if (_searchQuery.value.isNotBlank()) {
+            val query = _searchQuery.value.lowercase()
+            filtered = filtered.filter {
+                it.restaurantName.lowercase().contains(query) ||
+                        it.location.lowercase().contains(query) ||
+                        it.notes.lowercase().contains(query)
+            }
+        }
+
+        _selectedPriceLevel.value?.let { priceLevel ->
+            filtered = filtered.filter { it.priceLevel == priceLevel }
+        }
+
+        _minRating.value?.let { minRating ->
+            filtered = filtered.filter { it.foodQualityRating >= minRating }
+        }
+
+        _entriesState.value = UiState.Success(filtered)
+    }
+
+    fun getEntriesWithCoordinates(): List<JournalEntry> {
+        return allEntries.filter { it.hasValidCoordinates() }
     }
 
     fun resetOperationState() {

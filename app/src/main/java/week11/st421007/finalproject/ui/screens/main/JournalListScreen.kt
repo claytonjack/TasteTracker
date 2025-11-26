@@ -6,11 +6,14 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ExitToApp
+import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Restaurant
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.*
@@ -37,7 +40,11 @@ fun JournalListScreen(
 ) {
     val userId = authViewModel.currentUserId ?: return
     val entriesState by journalViewModel.entriesState.collectAsState()
+    val searchQuery by journalViewModel.searchQuery.collectAsState()
+    val selectedPriceLevel by journalViewModel.selectedPriceLevel.collectAsState()
+    val minRating by journalViewModel.minRating.collectAsState()
 
+    var showFilterMenu by remember { mutableStateOf(false) }
     var showLogoutDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(userId) {
@@ -49,6 +56,18 @@ fun JournalListScreen(
             TopAppBar(
                 title = { Text("Food Journal") },
                 actions = {
+                    IconButton(onClick = { showFilterMenu = !showFilterMenu }) {
+                        BadgedBox(
+                            badge = {
+                                if (selectedPriceLevel != null || minRating != null) {
+                                    Badge(containerColor = MaterialTheme.colorScheme.error)
+                                }
+                            }
+                        ) {
+                            Icon(Icons.Default.FilterList, contentDescription = "Filter")
+                        }
+                    }
+
                     IconButton(onClick = { showLogoutDialog = true }) {
                         Icon(Icons.Default.ExitToApp, contentDescription = "Logout")
                     }
@@ -68,73 +87,157 @@ fun JournalListScreen(
             )
         }
     ) { paddingValues ->
-        when (val state = entriesState) {
-            is UiState.Loading -> {
-                Box(
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { journalViewModel.updateSearchQuery(it) },
+                label = { Text("Search") },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                trailingIcon = {
+                    if (searchQuery.isNotEmpty()) {
+                        IconButton(onClick = { journalViewModel.updateSearchQuery("") }) {
+                            Icon(Icons.Default.Clear, contentDescription = "Clear search")
+                        }
+                    }
+                },
+                singleLine = true,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            )
+
+            if (showFilterMenu) {
+                Card(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues),
-                    contentAlignment = Alignment.Center
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
                 ) {
-                    CircularProgressIndicator()
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            text = "Filters",
+                            style = MaterialTheme.typography.titleMedium
+                        )
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        Text("Price", style = MaterialTheme.typography.labelMedium)
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.padding(vertical = 8.dp)
+                        ) {
+                            for (level in 1..4) {
+                                FilterChip(
+                                    selected = selectedPriceLevel == level,
+                                    onClick = {
+                                        journalViewModel.setPriceLevelFilter(
+                                            if (selectedPriceLevel == level) null else level
+                                        )
+                                    },
+                                    label = { Text("$".repeat(level)) }
+                                )
+                            }
+                        }
+
+                        Text("Minimum Rating", style = MaterialTheme.typography.labelMedium)
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.padding(vertical = 8.dp)
+                        ) {
+                            for (rating in listOf(3f, 4f, 5f)) {
+                                FilterChip(
+                                    selected = minRating == rating,
+                                    onClick = {
+                                        journalViewModel.setMinRatingFilter(
+                                            if (minRating == rating) null else rating
+                                        )
+                                    },
+                                    label = { Text("${rating.toInt()}+ ⭐") }
+                                )
+                            }
+                        }
+
+                        if (selectedPriceLevel != null || minRating != null) {
+                            TextButton(
+                                onClick = { journalViewModel.clearFilters() },
+                                modifier = Modifier.align(Alignment.End)
+                            ) {
+                                Text("Clear Filters")
+                            }
+                        }
+                    }
                 }
+
+                Spacer(modifier = Modifier.height(8.dp))
             }
-            is UiState.Success -> {
-                val entries = state.data
-                if (entries.isEmpty()) {
+
+            when (val state = entriesState) {
+                is UiState.Loading -> {
                     Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(paddingValues),
+                        modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(
-                                imageVector = Icons.Default.Restaurant,
-                                contentDescription = null,
-                                modifier = Modifier.size(64.dp),
-                                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Text(
-                                text = "No journal entries yet",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                            )
+                        CircularProgressIndicator()
+                    }
+                }
+                is UiState.Success -> {
+                    val entries = state.data
+                    if (entries.isEmpty()) {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(
+                                    imageVector = Icons.Default.Restaurant,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(64.dp),
+                                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Text(
+                                    text = if (searchQuery.isNotEmpty() || selectedPriceLevel != null || minRating != null)
+                                        "No entries match your filters"
+                                    else
+                                        "No journal entries yet",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                )
+                            }
+                        }
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            items(entries, key = { it.id }) { entry ->
+                                JournalEntryCard(
+                                    entry = entry,
+                                    onClick = { onNavigateToEditEntry(entry.id) }
+                                )
+                            }
                         }
                     }
-                } else {
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(paddingValues),
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                }
+                is UiState.Error -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
                     ) {
-                        items(entries, key = { it.id }) { entry ->
-                            JournalEntryCard(
-                                entry = entry,
-                                onClick = { onNavigateToEditEntry(entry.id) }
-                            )
-                        }
+                        Text(
+                            text = state.message,
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodyLarge
+                        )
                     }
                 }
+                else -> {}
             }
-            is UiState.Error -> {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = state.message,
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodyLarge
-                    )
-                }
-            }
-            else -> {}
         }
     }
 
