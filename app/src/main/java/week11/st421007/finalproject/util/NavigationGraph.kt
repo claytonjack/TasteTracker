@@ -21,6 +21,7 @@ import week11.st421007.finalproject.ui.screens.main.JournalListScreen
 import week11.st421007.finalproject.ui.screens.main.MapScreen
 import week11.st421007.finalproject.viewmodel.AuthViewModel
 import week11.st421007.finalproject.viewmodel.JournalViewModel
+import week11.st421007.finalproject.viewmodel.NotificationViewModel
 import week11.st421007.finalproject.viewmodel.PlacesViewModel
 
 sealed class Screen(val route: String) {
@@ -39,7 +40,8 @@ fun NavigationGraph(
     navController: NavHostController,
     authViewModel: AuthViewModel = viewModel(),
     journalViewModel: JournalViewModel = viewModel(),
-    placesViewModel: PlacesViewModel = viewModel()
+    placesViewModel: PlacesViewModel = viewModel(),
+    notificationViewModel: NotificationViewModel = viewModel()
 ) {
     val isAuthenticated by authViewModel.isAuthenticated.collectAsState()
 
@@ -122,6 +124,7 @@ fun NavigationGraph(
                         0 -> JournalListScreen(
                             authViewModel = authViewModel,
                             journalViewModel = journalViewModel,
+                            notificationViewModel = notificationViewModel,
                             onNavigateToAddEntry = {
                                 navController.navigate(Screen.AddEntry.route)
                             },

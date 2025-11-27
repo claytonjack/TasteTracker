@@ -16,6 +16,7 @@ import week11.st421007.finalproject.ui.theme.TasteTrackerTheme
 import week11.st421007.finalproject.util.NavigationGraph
 import week11.st421007.finalproject.viewmodel.AuthViewModel
 import week11.st421007.finalproject.viewmodel.JournalViewModel
+import week11.st421007.finalproject.viewmodel.NotificationViewModel
 import week11.st421007.finalproject.viewmodel.PlacesViewModel
 
 class MainActivity : ComponentActivity() {
@@ -41,12 +42,14 @@ class MainActivity : ComponentActivity() {
                     val authViewModel: AuthViewModel = viewModel()
                     val journalViewModel: JournalViewModel = viewModel()
                     val placesViewModel: PlacesViewModel = viewModel()
+                    val notificationViewModel: NotificationViewModel = viewModel()
 
                     NavigationGraph(
                         navController = navController,
                         authViewModel = authViewModel,
                         journalViewModel = journalViewModel,
-                        placesViewModel = placesViewModel
+                        placesViewModel = placesViewModel,
+                        notificationViewModel = notificationViewModel
                     )
                 }
             }

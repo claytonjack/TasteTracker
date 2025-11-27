@@ -1,5 +1,9 @@
 package week11.st421007.finalproject.ui.screens.main
 
+import android.Manifest
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -12,6 +16,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
@@ -20,12 +25,15 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import week11.st421007.finalproject.model.JournalEntry
+import week11.st421007.finalproject.util.notifications.NotificationHelper
 import week11.st421007.finalproject.util.UiState
 import week11.st421007.finalproject.viewmodel.AuthViewModel
 import week11.st421007.finalproject.viewmodel.JournalViewModel
+import week11.st421007.finalproject.viewmodel.NotificationViewModel
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -34,6 +42,7 @@ import java.util.*
 fun JournalListScreen(
     authViewModel: AuthViewModel,
     journalViewModel: JournalViewModel,
+    notificationViewModel: NotificationViewModel,
     onNavigateToAddEntry: () -> Unit,
     onNavigateToEditEntry: (String) -> Unit,
     onLogout: () -> Unit
@@ -43,12 +52,28 @@ fun JournalListScreen(
     val searchQuery by journalViewModel.searchQuery.collectAsState()
     val selectedPriceLevel by journalViewModel.selectedPriceLevel.collectAsState()
     val minRating by journalViewModel.minRating.collectAsState()
+    val context = LocalContext.current
+    val notificationPermissionGranted by notificationViewModel.notificationPermissionGranted.collectAsState()
 
     var showFilterMenu by remember { mutableStateOf(false) }
     var showLogoutDialog by remember { mutableStateOf(false) }
 
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        notificationViewModel.onPermissionResult(isGranted)
+        if (isGranted) {
+            notificationViewModel.setupNotificationScheduler(userId)
+        }
+    }
+
     LaunchedEffect(userId) {
         journalViewModel.loadEntries(userId)
+        if (notificationPermissionGranted) {
+            notificationViewModel.setupNotificationScheduler(userId)
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
     }
 
     Scaffold(
@@ -56,6 +81,12 @@ fun JournalListScreen(
             TopAppBar(
                 title = { Text("Food Journal") },
                 actions = {
+                    IconButton(onClick = {
+                        NotificationHelper.triggerTestNotifications(context, userId)
+                    }) {
+                        Icon(Icons.Default.Notifications, contentDescription = "Test Notification")
+                    }
+
                     IconButton(onClick = { showFilterMenu = !showFilterMenu }) {
                         BadgedBox(
                             badge = {
